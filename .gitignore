@@ -1,0 +1,13 @@
+.build/
+.swiftpm/
+.DS_Store
+*.app/
+*.dSYM/
+*.keychain
+*.keychain-db
+*.pem
+*.p12
+keychain-password
+verification/
+.env
+.env.*
