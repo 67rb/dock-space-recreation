@@ -1,49 +1,45 @@
-# Docklet — Dock Space Recreation
+# Docklet — one app with Dock widgets
 
-> **Project status: BETA.** Features and macOS Dock integration are still under active development.
+Docklet 0.5.1 runs music, timer, stocks, weather, calendar, reminders, clock and private Quick Notes in **one process**. It no longer packages, installs or launches one app per widget.
 
-Docklet is an independent macOS app that recreates a DockSpace-style widget experience: one app process places interactive panels alongside the macOS Dock. It is a personal project and is not affiliated with Dockspace.
+## Use
 
-## Widgets and controls
+Open `~/Applications/Docklet.app` (the `../Docklet.app` workspace link also opens the installed copy). On the Widgets page, click **Enable Accessibility**, then turn on **Docklet** in macOS System Settings → Privacy & Security → Accessibility. Widgets attach automatically after access is available.
 
-The current app includes music, timer, stocks, weather, calendar, reminders, a clock, and private Quick Notes. Widgets can be added, resized, rearranged, and saved into named layouts. The timer includes focus and break presets; stocks has a searchable watchlist and 1D, 1W, 1M, and 1Y charts; weather supports Celsius and Fahrenheit.
+Use **Add widget** to add a feature, then adjust its individual width beside the actual-size preview. Right-click a Dock tile for quick actions, width choices and removal. Timer controls include focus and break presets, progress, optional completion sound, extra time, and stopwatch lap splits. Stocks includes a 12-symbol watchlist, company search, daily/weekly/monthly/yearly charts, hover inspection, range lows/highs and saved quotes for offline viewing. Search for “Bitcoin” to choose the Bitcoin USD market symbol, BTC-USD; ticker BTC is a different listing. Quick Notes saves locally as you type. Weather supports Celsius or Fahrenheit. Save named Dock layouts, choose a Focus, Markets or Minimal preset, and undo layout changes. All controls and data sources belong to the same Docklet process.
 
-Stock quotes come from Yahoo Finance and may be delayed. Weather forecasts come from Open-Meteo. Music, calendar, and reminders use the corresponding macOS apps and permissions.
+Size & Appearance changes widget text, rounded corners, and the size/height of the macOS Dock. Apple's Dock can shrink icons to fit the screen. Width choices reserve one to five icon spaces; a crowded Dock therefore gives each widget less physical room.
 
-## How Dock integration works
+Use the menu bar icon to reopen settings or controls. Closing settings leaves widgets running. Quit stops the widgets and removes their reserved spaces. Show Dock Widgets pauses/resumes integration. Repair Placement rebuilds reserved spaces if they have been moved manually.
 
-Apple's public Dock tile API provides square app tiles. Docklet instead reserves native spacer tiles beside its own app icon and draws panels over the measured spaces. Accessibility permission is used to read Dock item geometry; it does not read other apps' contents. Docklet keeps unrelated Dock entries and makes a backup before layout changes.
+## Dock integration
 
-Live alignment depends on the Dock's accessibility geometry. If a safe position cannot be established, Docklet hides the overlay and its controls remain available in the settings and menu bar. macOS may briefly reload the Dock after a layout change. Quit Docklet to stop its widgets and remove its reserved spaces.
+Apple's public app Dock tile API is square. Docklet instead reserves native Dock spacer tiles beside its one app icon, then draws interactive panels over those measured spaces. Accessibility is used only to read Dock item geometry; it does not read the contents of other applications. Panels follow Dock movement and magnification and are hidden when their measured positions are off screen or cannot be safely established.
 
-## Requirements
+The renderer verifies the available area and avoids placing wide panels over another application's icon. Layout changes briefly reload the system Dock. Before each change the pinned-app array is backed up under `~/Library/Application Support/Docklet/Dock Backups`. Existing unrelated Dock entries are preserved. macOS discards custom spacer identifiers, so the app records the number of reserved spaces immediately after its own anchor and uses that bounded range for resizing and cleanup. Rapid layout edits are grouped into one reload.
 
-- macOS 14 or later.
-- Swift 5.10 or later and Xcode Command Line Tools.
-- Accessibility permission for live Dock panels.
-- Optional permissions for Music, Calendar, and Reminders features.
+This reproduces the intended single-app interaction. It is our implementation; Dockspace's internal implementation is not documented on its site. Live alignment requires Accessibility access and depends on the Dock's accessibility geometry. We do not bypass macOS permissions. If alignment is unavailable, controls remain usable from settings/menu bar, and no approximate overlay is shown.
 
-## Build and install
+## Data
 
-    ./check-layout.sh
-    ./check-features.sh
-    ./package-app.sh
-    python3 install-app.py
-    open ~/Applications/Docklet.app
+Stocks: Yahoo Finance watchlist with company search, daily changes, cached quotes and 1D/1W/1M/1Y charts; data may be delayed or temporarily unavailable. Weather: user-selected city and four-day forecast from Open-Meteo, refreshed every 15 minutes. Music: Apple Music/Spotify after explicit connection. Calendar/Reminders: explicit EventKit access; upcoming events, incomplete reminders, adding and completing reminders. Timer: persisted countdown/stopwatch, pause/resume/reset. Clock: local time/date and 12/24-hour preference.
 
-Packaging builds a single app bundle. The installer places it in ~/Applications and updates Docklet's own Dock entry. Personal signing credentials, when generated by the packaging flow, are stored outside this repository. You can set DOCKLET_SIGN_IDENTITY to use an existing macOS signing identity.
+## Build and checks
 
-## Beta notes
+```sh
+./check-layout.sh
+./check-features.sh
+./package-app.sh
+python3 install-app.py
+open ~/Applications/Docklet.app
+```
 
-Docklet changes the macOS Dock layout to reserve its widget spaces. It records backups before making layout changes and preserves unrelated entries, but behavior depends on macOS accessibility geometry and can vary across system versions. Review the source before installing and use the backup recovery guidance in the app's settings if your Dock layout needs repair.
+Requires macOS 14+, Swift 5.10+ and command line tools. No third-party dependencies. Packaging creates exactly one application bundle. Checks cover Dock preference preservation, safe geometry allocation, local timer state, watchlist and layout persistence, temperature conversion, stock search results and chart ranges; Dock layout checks do not edit the real Dock. Live Dock alignment must be checked after Accessibility is granted.
 
-## Project layout
+Personal builds now use a persistent signing certificate in a dedicated local keychain under `~/Library/Application Support/Docklet/Signing`. Its private credentials stay outside the source tree. Signing temporarily includes that keychain in the search list, then restores the original list. No certificate trust settings are changed. The designated requirement binds the app identifier to that certificate, keeping its identity consistent across updates. The first switch from the previous ad-hoc build requires a fresh Accessibility approval. If you have a macOS signing certificate, set `DOCKLET_SIGN_IDENTITY` when packaging instead.
 
-- Sources/Docklet/ — app, Dock integration, widget views, and data stores.
-- Tests/ — layout and feature-check source files.
-- Package.swift — Swift Package Manager manifest.
-- package-app.sh, install-app.py — packaging and installation.
+The installer places the app outside synchronized Documents, preserves other native Dock entries, updates the single Docklet entry, removes its stale file bookmark, and links the workspace app path to the installed copy. Previous copies are archived locally under `~/Library/Application Support/Docklet/Previous Builds`.
 
-## License
+Widget shortcuts use `docklet://widget/add/stocks`, `docklet://widget/remove/stocks`, `docklet://widget/size/stocks/3`, and `docklet://widget/open/stocks` (replace stocks with another widget name). These call the same actions as settings. Dock alignment diagnostics are saved to `~/Library/Application Support/Docklet/dock-diagnostics.json`; launch with `--diagnostics` to save tile images. The stock popover uses an opaque scrollable surface sized to the display and floats above the Dock widgets while open.
 
-No software license has been added yet.
+The old per-widget applications have been retired from this personal installation. Their copies are archived under `~/Library/Application Support/Docklet/Retired Widget Apps`, and their prior Dock entries are backed up with the other Dock snapshots.
